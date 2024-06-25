@@ -1,0 +1,254 @@
+\documentclass{article}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{pythonhighlight}
+\usepackage{hyperref}
+\usepackage{authblk}
+\usepackage{fix-cm}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{footmisc}
+\usepackage{fancyhdr}
+\usepackage{appendix}
+\graphicspath{ {./images/} }
+\lstset{
+  basicstyle=\fontsize{7}{8}\selectfont,
+  breaklines=true,
+  columns=fullflexible,
+  frame=single,
+  backgroundcolor=\color{lightgray},
+  keywordstyle=\color{blue}\bfseries,
+}
+\titleformat{\subsubsection}
+  {\normalfont\fontsize{8}{9}\bfseries} % Change \Large to desired size
+  {\thesubsubsection}{.5em}{}
+%----------------------------------------------------------------------------------------
+%	TITLE AND AUTHOR(S)
+%----------------------------------------------------------------------------------------
+
+\title{\textbf{Deployment of Flask Application on the Cloud}} % The article title
+
+%\subtitle{Subtitle} % Uncomment to display a subtitle
+
+% The article author(s) - author affiliations need to be specified in the AUTHOR AFFILIATIONS block
+
+
+\author[1]{Researched by: Teo Nickola}
+\author[2]{Vipul H Harihar}
+\affil[1]{Full Stack Intern | GenTrust, LLC}
+\affil[2]{Lead Software Engineer | GenTrust, LLC}
+
+\date{Dated: \today} % An optional date to appear under the author(s)
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textbf{\large{Deployment of Flask Application on the Cloud}}\\\small{Researched by Teo Nickola and Vipul H Harihar}}
+
+
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT
+%----------------------------------------------------------------------------------------
+
+\section{Abstract} % This section will not appear in the table of contents due to the star (\section*)
+
+\hspace*{5mm}This paper details the implementation process of deploying a Flask application to the cloud, specifically focusing on Microsoft Azure. With the advent of cloud services, like Amazon Web Services and Microsoft Azure, it has become highly convenient and cost-efficient to deploy applications to the cloud. By leveraging the power of microservices, a software development approach that breaks large applications into smaller, independent services, this guide aims to help developers ensure their applications are resilient, easily scalable, and maintainable.
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+\hspace*{5mm} Initially, organizations ran applications on physical servers. When multiple applications run on a single server, one could consume most resources, causing others to underperform. To address this, virtualization was introduced. It enables running multiple Virtual Machines (VMs) on a single server's CPU, optimizing resource utilization, enhancing scalability, facilitating easier application updates, and reducing hardware costs\footnote{\label{kubernetes}\href{https://kubernetes.io/docs/concepts/overview/}{Kubernetes}}(2023).\\
+
+\textbf{Containerization} is the process of packaging application code along with all its required files and libraries. A container is a standard unit of software that packages up code and all its dependencies so the application runs quickly and reliably from one computing environment to another\footnote{\label{docker}\href{https://www.docker.com/resources/what-container/}{Docker}}. Containers function similarly to Virtual Machines, but offer more relaxed isolation properties, allowing them to share the Operating System (OS) among applications. This makes containers lightweight\footref{kubernetes}. A container image is a single, executable file used to create a container. The image contains all libraries and dependencies needed for the container to run\footref{docker}. There are many ways to containerize an application, but the most common and efficient is through Docker. Docker is an open platform for developing, shipping, and running applications. It allows users to ship, test, and deploy applications in any environment without worrying about compatibility issues, regardless of the machine configuration settings\footnote{\href{Azure:\thickspace https://www.dimensiona.com/en/what-is-docker-and-what-are-its-advantages/\#:~:text=Docker\%20is\%20a\%20container\%20platform,for\%20it\%20to\%20run\%20independently.}{Azure}}.\\
+
+\textbf{Flask} is a widely used web framework based on the Python programming language, used for designing web applications, APIs, microservices, and more. Flask's framework is simple, flexible, scalable, and reliable, enabling it to process increased traffic. Its ability to handle a wide range of application needs makes it an extremely popular choice for building web-based solutions\footnote{\href{https://www.bairesdev.com/blog/what-is-flask/}{Flask}}\\
+
+\textbf{Cloud computing} is the delivery of various computing services over the internet, such as databases, servers, software, analytics, and more. It offers faster innovation, flexible resources, and economies of scale. Cloud computing allows companies to optimize IT costs by eliminating the expense of purchasing hardware and equipment to run data centers. Most cloud computing services are on demand and can be provisioned in minutes. A significant component is the scalability of cloud computing, which delivers more resources during high demand and reduces resources when demand is low.
+Microsoft Azure is Microsoft’s cloud computing platform that provides a broad range of cloud services, including computing, analytics, storage, and networking\footnote{\href{Azure:\thickspace https://www.dimensiona.com/en/what-is-docker-and-what-are-its-advantages/\#:~:text=Docker\%20is\%20a\%20container\%20platform,for\%20it\%20to\%20run\%20independently.}{Azure}}. \textbf{Kubernetes} is a flexible, open-source platform designed to manage containerized workloads and services. In a production environment, it's crucial to manage the containers running the applications and ensure continuous uptime. Kubernetes offers a framework to run distributed systems reliably, handling application scaling, failover, deployment patterns, and more\footnote{\href{https://kubernetes.io/docs/concepts/overview/}{Kubernetes}}.
+
+
+
+%----------------------------------------------------------------------------------------
+%	METHODS
+%----------------------------------------------------------------------------------------
+
+\section{Process}
+	\subsection{Set Up Azure Account}
+		\subsubsection{Create AZ Account}
+Go to the Azure homepage, select a plan, and create an account, unless one has already been created
+		\subsubsection{Install AZ CLI}
+Follow the instruction on \href{https://learn.microsoft.com/en-us/cli/azure/install-azure-cli}{Azure CLI installation} based on the Operating System
+		\subsubsection{Login To Azure}
+In the terminal:
+\begin{lstlisting}[language=bash]
+az login
+\end{lstlisting}
+	\subsection{Set Up Azure Resources}
+		\subsubsection{Create Resource Group}
+\begin{lstlisting}[language=bash]
+az group create --name ResourceGroupName --location eastus
+\end{lstlisting}
+		\subsubsection{Create Container Registry}
+\begin{lstlisting}
+az acr create --resource-group ResourceGroupName --name ContainerRegistry --sku Basic
+\end{lstlisting}
+		\subsubsection{Create Kubernetes Cluster and get Credentials}
+\begin{lstlisting}[language=bash]
+az aks create --resource-group ResourceGroupName --name AKSClusterName --node-count 1 --enable-addons monitoring --generate-ssh-keys
+az aks get-credentials --resource-group ResourceGroupName --name AKSClusterName
+\end{lstlisting}
+	\subsection{Containerize The Flask Application}
+		\subsubsection{Create Docker File}
+			Create a Dockerfile in the root directory of the flask application. This file instructs Docker on how to build the container image. Displayed Below is an example file:
+\begin{python}
+#Use an official Python runtime as a parent image
+FROM --platform=linux/amd64 python:3.12.3-slim
+
+#Set the working directory in the container
+WORKDIR /app
+
+#Copy the environment file
+COPY environment.yaml /app
+
+#Install Miniconda3 and create the environment
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    bzip2 \
+    && wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3.sh \
+    && /bin/bash ~/miniconda3.sh -b -p /opt/conda \
+    && rm ~/miniconda3.sh \
+    && /opt/conda/bin/conda update -n base -c defaults conda \
+    && /opt/conda/bin/conda env create -f /app/environment.yaml \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+#Make sure the environment is activated when running the container
+ENV PATH /opt/conda/envs/vipulenv/bin:$PATH
+
+#Copy the rest of the application
+COPY . /app
+
+#Make port 80 available to the world outside this container
+EXPOSE 80
+
+#Run the Flask app with Gunicorn
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:80", "--timeout", "120", "base:app"]
+
+\end{python}
+
+
+		\subsubsection{Build Docker Image}
+		Open up the terminal and navigate to the directory containing the Docker File. Build the Docker Image by using the command displayed below 
+\begin{lstlisting}[language=bash]
+docker build -t dockerhub-username/image-name .
+\end{lstlisting}
+
+		\subsubsection{Login to Azure Container Registry}
+\begin{lstlisting}[language=bash]
+az acr login --name ContainerRegistryName
+\end{lstlisting}
+		\subsubsection{Tag the image as v1 and push it to Azure Container Registry}
+\begin{lstlisting}[language=bash]
+docker tag dockerhub-username/image-name containerregistryname.azurecr.io/image-name:v1
+docker push containerregistryname.azurecr.io/image-name:v1
+\end{lstlisting}
+	\subsection{Create Kubernetes Resource}
+		\subsubsection{Create a Kubernetes deployment file}
+Create a new file named deployment.yaml and follow the instructions:
+\begin{python}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flaskapp-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flaskapp
+  template:
+    metadata:
+      labels:
+        app: flaskapp
+    spec:
+      containers:
+      - name: flaskapp
+        image: registry-name.azurecr.io/flaskapp:v1
+        ports:
+        - containerPort: 80
+\end{python}
+		\subsubsection{Create a Kubernetes service file}
+Create a new file named service.yaml and follow the instructions:
+\begin{python}
+apiVersion: v1
+kind: Service
+metadata:
+  name: flaskapp
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8080
+  selector:
+    app: flaskapp
+\end{python}
+
+	\subsection{Deploy flask application and service}
+\begin{lstlisting}[language=bash]
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+\end{lstlisting}
+
+	\subsection{Acess the Application}
+After deploying the service, it might take a few minutes for the external IP to become available. Check the service and get the external IP
+
+\begin{lstlisting}[language=bash]
+kubectl get service flaskapp
+\end{lstlisting}
+Once the external IP is available, access the flask application in a web browser at \texttt{http://<EXTERNAL-IP>}.
+
+\clearpage
+
+\begin{appendices}
+\section{Appendix}
+
+% Including a figure in the appendix
+\begin{figure}[h!]
+  \centering
+  \hspace*{-2cm}
+\includegraphics[width=16cm]{Kuburnetetes-Architecture}
+  \caption{Kubernetes Architecture}
+  \label{fig:appendix-image1}
+\end{figure}
+
+% Including a table in the appendix
+
+\end{appendices}
+
+\clearpage
+
+\begin{thebibliography}{9}
+
+\bibitem{docker}
+\url{https://www.docker.com/resources/what-container/}
+
+\bibitem{dockerplatform}
+\url{https://www.dimensiona.com/en/what-is-docker-and-what-are-its-advantages/#:~:text=Docker%20is%20a%20container%20platform,for%20it%20to%20run%20independently.}
+
+\bibitem{flask}
+\url{https://www.bairesdev.com/blog/what-is-flask/}
+
+\bibitem{Azure}
+\url{https://azure.microsoft.com/en-in/resources/cloud-computing-dictionary/what-is-cloud-computing#:~:text=Simply%20put%2C%20cloud%20computing%20is,resources%2C%20and%20economies%20of%20scale.}
+
+\bibitem{kubernetes}
+\url{https://kubernetes.io/docs/concepts/overview/}
+
+\end{thebibliography}
+
+
+\end{document}
